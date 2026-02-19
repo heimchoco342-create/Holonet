@@ -1,5 +1,5 @@
-**Holonet (홀로넷)** 프로젝트의 PRD입니다.
-기존의 **인간 개발자(Human)**를 위한 GUI와 **AI 에이전트(Droid)**를 위한 MCP 인터페이스가 공존하는 **하이브리드 플랫폼**으로 정의되었습니다.
+**Holonet (홀로넷)** 프로젝트의 최종 확정된 통합 PRD입니다.
+이 문서는 **"DevOps-First API Client"**이자 **"AI Agent Interface"**를 겸하는 Holonet의 모든 기획 사항과 기술적 구조(디렉토리 포함)를 포함합니다.
 
 ---
 
@@ -8,151 +8,194 @@
 | 문서 정보 | 내용 |
 | --- | --- |
 | **Project Name** | **Holonet (홀로넷)** |
-| **Version** | v1.1.0 (MCP Integrated) |
-| **Core Concept** | **DevOps-First API Client** + **AI Agent Interface** |
-| **Protocol** | **Model Context Protocol (MCP) Compliant** |
-| **Target User** | Backend Dev, DevOps, **AI Agents (Cursor, Claude, Windsurf)** |
+| **Version** | v1.0.0 (Final Release) |
+| **Type** | Desktop Application (Electron) + Sync Server |
+| **Core Concept** | Postman + Lens + MCP (AI Interface) |
+| **Repository** | Monorepo (pnpm workspace) |
 
 ---
 
 ## 1. Executive Summary (개요)
 
 **Holonet**은 팀 단위 API 협업과 Kubernetes 인프라 접근을 통합한 **차세대 개발 플랫폼**입니다.
-Postman의 API 관리 기능과 Lens의 포트포워딩 기능을 하나로 합쳐, 인간 개발자는 물론 **AI 에이전트까지도 사내 인프라와 통신할 수 있는 표준 프로토콜(MCP)**을 제공합니다. 이를 통해 **"AI가 코드를 짜고, 테스트까지 수행하는"** 완전한 자동화 워크플로우를 실현합니다.
+인간 개발자에게는 **"클릭 한 번으로 K8s 내부망 터널링"**을 제공하고, AI 에이전트(Cursor, Claude)에게는 **"사내 인프라와 통신할 수 있는 표준 프로토콜(MCP)"**을 제공하여, **"AI가 코드를 짜고, 테스트까지 수행하는"** 완전한 자동화 워크플로우를 실현합니다.
 
 ---
 
 ## 2. System Architecture (시스템 아키텍처)
 
-Holonet은 크게 3가지 인터페이스를 제공합니다.
+### 2.1. Interfaces
 
-1. **Human Interface (Electron):** 개발자가 눈으로 보고 클릭하는 GUI.
-2. **Droid Interface (MCP Server):** AI 에이전트가 통신하는 Stdio/SSE 인터페이스.
-3. **Holonet Core (Node.js):** K8s 터널링, HTTP 요청, 데이터 동기화를 담당하는 핵심 엔진.
+1. **Human Interface (GUI):** Electron 기반 데스크탑 앱. 개발자가 직접 조작.
+2. **Droid Interface (MCP):** AI 에이전트가 `Stdio`로 접속하는 서버.
 
-```mermaid
-graph TD
-    subgraph "Local Environment (User PC)"
-        AI[AI Agent / IDE] <-->|MCP Protocol| MCP[Holonet MCP Server]
-        User[Human Developer] <-->|GUI Interaction| UI[Electron Renderer]
-        
-        MCP <--> Core[Holonet Core (Main Process)]
-        UI <--> Core
-        
-        Core <-->|Read| Kube[~/.kube/config]
-        Core -->|Port-Forward| Tunnel[Localhost Tunnel]
-    end
+### 2.2. Data Flow
 
-    subgraph "Remote Infrastructure"
-        Core <-->|Sync API| Backend[Sync Server]
-        Tunnel <-->|Traffic| K8s[Target K8s Cluster]
-    end
-
-```
+* **Traffic:** `Localhost` -> `Electron Main Process` -> `K8s Tunnel` -> `Target Pod` (서버 경유 X, 로컬 직접 연결).
+* **Sync:** `Electron` <-> `Sync Server` <-> `PostgreSQL` (API 명세 데이터 동기화).
 
 ---
 
 ## 3. Tech Stack (기술 스택)
 
-### 3.1. Client & MCP Server (Local)
-
-* **Electron (Main Process):** 앱의 본체이자 MCP 서버 호스트.
-* **Model Context Protocol SDK:** `@modelcontextprotocol/sdk` (Node.js). AI와의 표준 통신 규격 준수.
-* **@kubernetes/client-node:** K8s 제어 및 포트포워딩 엔진.
-* **Axios / Got:** HTTP 요청 실행기.
-
-### 3.2. Sync Server (Remote)
-
-* **Fastify + Socket.io:** 실시간 데이터 동기화.
-* **PostgreSQL + Prisma:** API 명세 저장소.
-
----
-
-## 4. Key Features (핵심 기능)
-
-### 4.1. The Bridge (K8s Tunneling Integration)
-
-* **Context Auto-Discovery:** 로컬 `kubeconfig`를 읽어 K8s 클러스터 목록 자동화.
-* **Smart Tunneling:** 요청 시점에 백그라운드에서 `kubectl port-forward`를 수행하고, 로컬 포트로 트래픽을 라우팅.
-* **Zero-Config:** 개발자와 AI는 복잡한 인프라 설정 없이 `Service Name`만으로 호출 가능.
-
-### 4.2. The Archives (Team API Sync)
-
-* **Centralized DB:** 팀원 간 API 명세, 환경 변수 실시간 동기화.
-* **Postman Migration:** 기존 컬렉션(JSON) 100% 호환 Import.
-
-### 4.3. The Droid Protocol (MCP Support) - **New & Critical**
-
-이 프로젝트의 차별점입니다. Holonet은 **MCP 표준 스펙**을 준수하는 서버를 내장합니다.
-
-#### **A. Protocol Compliance (준수 사항)**
-
-* **Transport:** `Stdio` (Standard Input/Output) 기반 통신 지원 (Claude Desktop, Cursor 연동 최적화).
-* **Capabilities:** `resources` (읽기), `tools` (실행), `prompts` (템플릿) 기능 구현.
-
-#### **B. Exposed Resources (AI가 읽을 수 있는 정보)**
-
-* `holonet://collections`: 팀이 공유 중인 모든 API 컬렉션 리스트.
-* `holonet://collections/{id}/openapi`: 특정 서비스의 API 명세를 OpenAPI(Swagger) 포맷으로 변환하여 제공.
-* *AI 활용 예:* "주문 서비스 API 명세 읽어와서 `OrderController` 코드 짜줘."
-
-
-* `holonet://environments`: 현재 활성화된 환경 변수(Dev/Staging) 값.
-
-#### **C. Exposed Tools (AI가 수행할 수 있는 행동)**
-
-* `execute_saved_request(request_id, environment_name)`:
-* DB에 저장된 특정 API를 실행하고 결과(JSON)를 반환.
-* **자동 터널링 포함:** 대상이 K8s 서비스라면, Holonet이 터널을 뚫고 결과를 가져다 줌.
-
-
-* `proxy_curl(method, url, headers, body, k8s_context)`:
-* 저장되지 않은 임의의 요청을 특정 K8s 클러스터로 터널링하여 발송.
-* *AI 활용 예:* "지금 Dev 클러스터의 `user-service` 헬스 체크 엔드포인트 좀 찔러봐."
-
-
+| 영역 | 구분 | 기술 스택 | 선정 이유 |
+| --- | --- | --- | --- |
+| **Client** | **Core** | **Electron** | Node.js 환경 접근(File System, Net) 및 CORS 제약 없는 HTTP 요청. |
+|  | **Bundler** | **Vite** | 빠른 빌드 속도 및 HMR 지원. |
+|  | **UI** | **React + Tailwind** | Shadcn/UI 기반의 모던 다크모드 인터페이스. |
+|  | **K8s** | **@kubernetes/client-node** | `kubectl` 없이 Node.js 레벨에서 포트포워딩 스트림 제어. |
+|  | **AI** | **@modelcontextprotocol/sdk** | AI 에이전트와의 표준 통신 규격 준수. |
+| **Server** | **Runtime** | **Node.js (Fastify)** | Express 대비 높은 처리량, 낮은 오버헤드. |
+|  | **DB** | **PostgreSQL + Prisma** | JSONB 타입을 활용한 유연한 API 명세 저장. |
+|  | **Sync** | **Socket.io** | 실시간 데이터 변경 사항 전파. |
 
 ---
 
-## 5. Development Roadmap (로드맵)
+## 4. Directory Structure (Monorepo)
+
+`pnpm workspace`를 기반으로 Client와 Server를 통합 관리합니다.
+
+```text
+holonet/
+├── package.json              # Root Configuration
+├── pnpm-workspace.yaml       # Workspace definitions
+├── docker-compose.yml        # Local DB (Postgres)
+│
+├── apps/
+│   ├── client/               # [Electron App] The Interface
+│   │   ├── src/
+│   │   │   ├── main/         # [Main Process]
+│   │   │   │   ├── k8s/      # [The Bridge] Tunneling Engine
+│   │   │   │   └── mcp/      # [The Droid] MCP Server Logic
+│   │   │   ├── preload/      # IPC Bridge
+│   │   │   └── renderer/     # [React UI]
+│   │   └── electron.vite.config.ts
+│   │
+│   └── server/               # [Sync Server] The Archives
+│       ├── prisma/           # Database Schema
+│       ├── src/
+│       │   ├── modules/      # Feature logic (Workspace, Collection...)
+│       │   ├── events/       # Socket.io handlers
+│       │   └── plugins/      # Fastify plugins
+│       └── Dockerfile
+│
+└── packages/
+    └── shared/               # Shared Types (DTOs)
+
+```
+
+---
+
+## 5. Core Features (핵심 기능)
+
+### 5.1. The Bridge (K8s Integration)
+
+* **Context Auto-Discovery:** `~/.kube/config` 자동 스캔 및 Context 목록화.
+* **Smart Tunneling:**
+* 요청 시 `Service Name`, `Namespace`, `Port`가 감지되면 백그라운드 포트포워딩 시작.
+* 요청 URL을 `localhost:{random_port}`로 자동 치환하여 발송.
+
+
+* **Zero-Config:** 개발자는 인프라 설정 없이 "Send" 버튼만 누르면 됨.
+
+### 5.2. The Archives (API Management)
+
+* **Postman Import:** 기존 `.json` 컬렉션(v2.1) 드래그 앤 드롭 마이그레이션.
+* **Real-time Sync:** 팀원이 수정한 API 명세가 내 화면에도 즉시 반영.
+* **Environment Variables:** 팀 공유 변수(DB)와 로컬 전용 변수(Local Storage) 분리.
+
+### 5.3. The Droid Protocol (MCP Support)
+
+AI 에이전트(Cursor, Windsurf 등)를 위한 전용 인터페이스입니다.
+
+#### **A. Resources (AI Read-Only)**
+
+* `holonet://collections`: 팀 전체 API 리스트 조회.
+* `holonet://collections/{id}/openapi`: 특정 서비스 명세를 OpenAPI 포맷으로 변환 제공.
+* *Use Case:* AI가 "주문 API 명세 줘"라고 하면 Holonet이 스키마를 던져줌.
+
+
+
+#### **B. Tools (AI Action)**
+
+* `execute_k8s_request`:
+* Input: `service`, `namespace`, `path`, `method`, `body`.
+* Action: Holonet이 터널을 뚫고 요청을 대리 수행 후 결과 반환.
+* *Use Case:* AI가 "작성한 코드 테스트해봐"라고 하면 Holonet이 실제 K8s망에 요청을 쏨.
+
+
+
+---
+
+## 6. Database Schema (Prisma)
+
+```prisma
+// apps/server/prisma/schema.prisma
+
+model Workspace {
+  id        String   @id @default(uuid())
+  name      String
+  items     Item[]
+  createdAt DateTime @default(now())
+}
+
+model Item {
+  id           String  @id @default(uuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id])
+  parentId     String?
+  parent       Item?   @relation("FolderTree", fields: [parentId], references: [id])
+  children     Item[]  @relation("FolderTree")
+  
+  type         String  // 'FOLDER' | 'REQUEST'
+  name         String
+  sortOrder    Int     @default(0)
+
+  // Request Data
+  method       String?
+  url          String?
+  headers      Json?
+  body         Json?
+
+  // The Bridge Config (K8s Tunnel)
+  k8sService   String?
+  k8sNamespace String? @default("default")
+  k8sPort      Int?
+}
+
+model Environment {
+  id          String @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  name        String
+  variables   Json
+}
+
+```
+
+---
+
+## 7. Roadmap (개발 로드맵)
 
 ### Phase 1: Foundation (The Base)
 
-* Electron + React 기반의 기본 API 클라이언트 구축.
-* PostgreSQL 기반의 중앙 동기화 서버(BE) 구축.
-* Postman Import 기능 구현.
+* [Server] Fastify + Prisma 기본 CRUD 및 소켓 서버 구축.
+* [Client] Electron + React 보일러플레이트.
+* [Client] Postman Import 파서 구현.
 
 ### Phase 2: Connection (The Bridge)
 
-* Electron Main Process에 K8s 포트포워딩 엔진 탑재.
-* `~/.kube/config` 파싱 및 Context 스위칭 UI 구현.
+* [Client] `~/.kube/config` 파싱 로직 (Main Process).
+* [Client] `@kubernetes/client-node` 포트포워딩 엔진 구현.
+* [Client] Axios 요청 인터셉터(Interceptor)에 터널링 로직 주입.
 
 ### Phase 3: Intelligence (The Droid)
 
-* **MCP SDK 연동:** Electron 앱 실행 시 MCP 서버 사이드카 실행.
-* **Resource Provider 구현:** DB 데이터를 AI가 읽기 좋은 포맷(Markdown/JSON)으로 변환 서빙.
-* **Tool Provider 구현:** AI의 요청을 받아 K8s 터널링 엔진을 트리거하는 로직 구현.
+* [Client] MCP SDK 연동 및 서버 임베딩.
+* [Client] `holonet://` 리소스 프로바이더 구현.
+* [Client] `execute_tool` 핸들러 구현.
 
 ---
 
-## 6. User Scenario (AI Integration)
-
-**상황:** 개발자가 IDE(Cursor)에서 "결제 실패 버그"를 수정 중.
-
-1. **개발자:** *"@Holonet, 지금 `Payment-Service`의 '결제 승인' API 명세 좀 보여줘."*
-2. **Holonet (MCP Resource):** DB에서 최신 명세를 긁어와 AI에게 제공.
-3. **AI:** *"명세를 확인했습니다. 코드를 수정했습니다. 이제 테스트해 볼까요?"*
-4. **개발자:** *"어, 지금 `Staging` 환경에다가 이 요청으로 테스트해봐."*
-5. **AI:** (Holonet의 `execute_saved_request` 툴 호출)
-6. **Holonet (Core):**
-* `Staging` 클러스터로 포트포워딩 터널 개통.
-* 요청 발송 -> 응답 수신.
-* 터널 폐쇄.
-
-
-7. **AI:** *"테스트 성공! 응답 코드는 200 OK입니다."*
-
----
-
-**Holonet**은 이제 단순한 툴이 아닙니다. **인간과 AI가 함께 쓰는 인프라 OS**입니다.
-이 스펙으로 확정하고, **MCP 서버 설정을 포함한 초기 프로젝트 구조(Scaffolding)**를 잡아드릴까요?
+이 문서는 개발팀이 즉시 구현에 착수할 수 있는 **마스터플랜**입니다.
+이제 **`npm init`** 하러 가시죠. May the Force be with your code.
