@@ -61,22 +61,23 @@ export function WorkspaceList({ onSelect, selectedId }: WorkspaceListProps) {
 
   if (loading) {
     return (
-      <div className="w-64 bg-[#1a1a1a] border-r border-[#2a2a2a] p-4">
+      <div className="w-64 min-w-[200px] max-w-[300px] bg-[#1a1a1a] border-r border-[#2a2a2a] p-4">
         <div className="text-gray-400">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="w-64 bg-[#1a1a1a] border-r border-[#2a2a2a] flex flex-col h-full">
-      <div className="p-4 border-b border-[#2a2a2a]">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-white">Workspaces</h2>
+    <div className="w-64 min-w-[200px] max-w-[300px] bg-[#252526] border-r border-[#3e3e3e] flex flex-col h-full overflow-hidden">
+      <div className="p-3 border-b border-[#3e3e3e] bg-[#2d2d30]">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-semibold text-[#cccccc] uppercase tracking-wider">Workspaces</h2>
           <button
             onClick={() => setShowCreate(!showCreate)}
-            className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded"
+            className="w-6 h-6 flex items-center justify-center text-xs bg-[#0e639c] hover:bg-[#1177bb] text-white rounded transition-all hover:scale-110"
+            title="New Workspace"
           >
-            + New
+            +
           </button>
         </div>
         {showCreate && (
@@ -122,12 +123,17 @@ export function WorkspaceList({ onSelect, selectedId }: WorkspaceListProps) {
           <button
             key={workspace.id}
             onClick={() => onSelect(workspace)}
-            className={`w-full text-left px-4 py-2 hover:bg-[#2a2a2a] transition-colors ${
-              selectedId === workspace.id ? 'bg-[#2a2a2a] border-l-2 border-blue-500' : ''
+            className={`w-full text-left px-3 py-2.5 transition-all ${
+              selectedId === workspace.id 
+                ? 'bg-[#37373d] text-white border-l-2 border-[#007acc]' 
+                : 'hover:bg-[#2a2d2e] text-[#cccccc] border-l-2 border-transparent'
             }`}
           >
-            <div className="text-sm font-medium text-white">{workspace.name}</div>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-sm font-medium flex items-center gap-2">
+              <span className="text-[#858585]">📁</span>
+              <span className="flex-1 truncate">{workspace.name}</span>
+            </div>
+            <div className="text-xs text-[#858585] mt-1 ml-6">
               {workspace.items?.length || 0} items
             </div>
           </button>

@@ -15,10 +15,18 @@ export async function syncK8sServicesToCollection(
   workspaceId: string,
   services: DiscoveredService[]
 ): Promise<void> {
-  // Group services by namespace
+  // Filter to only 'dev' namespace (hardcoded as per user requirement)
+  const devServices = services.filter(service => service.namespace === 'dev');
+  
+  if (devServices.length === 0) {
+    console.log('No services found in dev namespace');
+    return;
+  }
+
+  // Group services by namespace (should only be 'dev' now)
   const byNamespace = new Map<string, DiscoveredService[]>();
   
-  for (const service of services) {
+  for (const service of devServices) {
     if (!byNamespace.has(service.namespace)) {
       byNamespace.set(service.namespace, []);
     }
@@ -35,7 +43,27 @@ export async function syncK8sServicesToCollection(
     return;
   }
 
-  // Create namespace folders and service items
+  // Clean up: Remove namespace folders that are not 'dev'
+  const namespaceFolders = allItems.filter(
+    (item) => item.type === 'FOLDER' && item.name?.startsWith('namespace:')
+  );
+  
+  for (const folder of namespaceFolders) {
+    const folderNamespace = folder.name.replace('namespace:', '');
+    if (folderNamespace !== 'dev') {
+      try {
+        // Delete the folder and all its children
+        await serverClient.deleteItem(folder.id);
+        // Remove from cache
+        allItems = allItems.filter(item => item.id !== folder.id && item.parentId !== folder.id);
+        console.log(`Removed namespace folder: ${folder.name}`);
+      } catch (error) {
+        console.error(`Failed to delete namespace folder ${folder.name}:`, error);
+      }
+    }
+  }
+
+  // Create namespace folders and service items (only for 'dev' now)
   for (const [namespace, namespaceServices] of byNamespace.entries()) {
     // Create namespace folder
     let namespaceFolder: any;
@@ -55,6 +83,7 @@ export async function syncK8sServicesToCollection(
           type: 'FOLDER',
           name: `namespace:${namespace}`,
           sortOrder: 0,
+          protocol: 'HTTP', // Required by DTO, but not used for folders
           k8sNamespace: namespace, // Required by DTO schema
         });
         // Add to cache for subsequent checks
@@ -96,6 +125,7 @@ export async function syncK8sServicesToCollection(
             type: 'REQUEST',
             name: service.name,
             sortOrder: 0,
+            protocol: 'HTTP',
             method: 'GET',
             url: `http://${service.name}/`,
             k8sService: service.name,

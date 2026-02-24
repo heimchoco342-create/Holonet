@@ -10,10 +10,19 @@ export const CreateItemSchema = z.object({
   type: z.enum(['FOLDER', 'REQUEST']),
   name: z.string().min(1),
   sortOrder: z.number().int().default(0),
+  protocol: z.enum(['HTTP', 'WebSocket', 'gRPC']).optional().default('HTTP'),
   method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']).optional(),
-  url: z.string().url().optional(),
+  url: z.string().optional(), // Allow non-URL for WebSocket/gRPC
   headers: z.record(z.any()).optional(),
   body: z.record(z.any()).optional(),
+  // WebSocket
+  wsMessages: z.array(z.any()).optional(),
+  // gRPC
+  grpcService: z.string().optional(),
+  grpcMethod: z.string().optional(),
+  grpcProto: z.string().optional(),
+  grpcMetadata: z.record(z.any()).optional(),
+  // K8s
   k8sService: z.string().optional(),
   k8sNamespace: z.string().default('default'),
   k8sPort: z.number().int().positive().optional(),

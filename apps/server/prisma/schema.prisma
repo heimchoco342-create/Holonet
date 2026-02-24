@@ -11,31 +11,44 @@ datasource db {
 }
 
 model Workspace {
-  id        String   @id @default(uuid())
-  name      String
-  items     Item[]
+  id           String        @id @default(uuid())
+  name         String
+  items        Item[]
   environments Environment[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 model Item {
-  id           String  @id @default(uuid())
-  workspaceId  String
-  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  parentId     String?
-  parent       Item?   @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
-  children     Item[]  @relation("FolderTree")
-  
-  type         String  // 'FOLDER' | 'REQUEST'
-  name         String
-  sortOrder    Int     @default(0)
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parentId    String?
+  parent      Item?     @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Item[]    @relation("FolderTree")
 
-  // Request Data
-  method       String?
-  url          String?
-  headers      Json?
-  body         Json?
+  type      String // 'FOLDER' | 'REQUEST'
+  name      String
+  sortOrder Int    @default(0)
+
+  // Protocol
+  protocol String? @default("HTTP") // 'HTTP' | 'WebSocket' | 'gRPC'
+
+  // HTTP Request Data
+  method  String?
+  url     String?
+  headers Json?
+  body    Json?
+
+  // WebSocket Data
+  wsMessages  Json? // WebSocket message history
+  wsConnected Boolean? @default(false)
+
+  // gRPC Data
+  grpcService  String?
+  grpcMethod   String?
+  grpcProto    String? // Proto file content or path
+  grpcMetadata Json?
 
   // The Bridge Config (K8s Tunnel)
   k8sService   String?
@@ -43,24 +56,24 @@ model Item {
   k8sPort      Int?
 
   // Test Scripts (Postman-like test scripts)
-  testScript   Json?    // Test script code (JavaScript)
-  testResults  Json?    // Last test execution results
+  testScript  Json? // Test script code (JavaScript)
+  testResults Json? // Last test execution results
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([workspaceId])
   @@index([parentId])
 }
 
 model Environment {
-  id          String @id @default(uuid())
+  id          String    @id @default(uuid())
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name        String
   variables   Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([workspaceId])
 }

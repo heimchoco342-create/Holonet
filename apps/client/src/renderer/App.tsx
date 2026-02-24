@@ -85,58 +85,76 @@ function App() {
   };
 
   return (
-    <div className="w-full h-full bg-[#0a0a0a] text-white flex flex-col">
-      {/* Top Navigation */}
-      <div className="flex border-b border-[#2a2a2a]">
+    <div className="w-full h-full bg-[#1e1e1e] text-[#d4d4d4] flex flex-col">
+      {/* Top Navigation - Postman style */}
+      <div className="flex border-b border-[#3e3e3e] bg-[#252526]">
         <button
           onClick={() => setActiveView('api')}
-          className={`px-4 py-2 text-sm font-medium ${
+          className={`px-6 py-3 text-sm font-medium relative transition-all ${
             activeView === 'api'
-              ? 'text-white border-b-2 border-blue-500'
-              : 'text-gray-400 hover:text-white'
+              ? 'text-white'
+              : 'text-[#cccccc] hover:text-white hover:bg-[#2a2d2e]'
           }`}
         >
-          📡 API Client
+          <span className="flex items-center gap-2">
+            <span>📡</span>
+            <span>API Client</span>
+          </span>
+          {activeView === 'api' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#007acc]"></div>
+          )}
         </button>
         <button
           onClick={() => setActiveView('lens')}
-          className={`px-4 py-2 text-sm font-medium ${
+          className={`px-6 py-3 text-sm font-medium relative transition-all ${
             activeView === 'lens'
-              ? 'text-white border-b-2 border-blue-500'
-              : 'text-gray-400 hover:text-white'
+              ? 'text-white'
+              : 'text-[#cccccc] hover:text-white hover:bg-[#2a2d2e]'
           }`}
         >
-          🔭 Lens (K8s)
+          <span className="flex items-center gap-2">
+            <span>🔭</span>
+            <span>Lens (K8s)</span>
+          </span>
+          {activeView === 'lens' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#007acc]"></div>
+          )}
         </button>
       </div>
 
       {activeView === 'lens' ? (
         <LensView />
       ) : (
-        <div className="flex-1 flex">
+        <div className="flex-1 flex min-w-0 overflow-hidden">
           {/* Sidebar - Workspaces */}
-          <WorkspaceList
-            onSelect={setSelectedWorkspace}
-            selectedId={selectedWorkspace?.id}
-          />
+          <div className="flex-shrink-0">
+            <WorkspaceList
+              onSelect={setSelectedWorkspace}
+              selectedId={selectedWorkspace?.id}
+            />
+          </div>
 
           {/* Middle - Collection Tree */}
-          {selectedWorkspace ? (
-            <CollectionTree
-              workspace={selectedWorkspace}
-              onSelectItem={setSelectedItem}
-              selectedId={selectedItem?.id}
-            />
-          ) : (
-            <div className="w-64 bg-[#1a1a1a] border-r border-[#2a2a2a] flex items-center justify-center">
-              <div className="text-gray-500 text-center text-sm">
-                Select a workspace
+          <div className="flex-shrink-0">
+            {selectedWorkspace ? (
+              <CollectionTree
+                workspace={selectedWorkspace}
+                onSelectItem={setSelectedItem}
+                selectedId={selectedItem?.id}
+              />
+            ) : (
+              <div className="w-64 bg-[#252526] border-r border-[#3e3e3e] flex items-center justify-center h-full">
+                <div className="text-[#858585] text-center text-sm">
+                  Select a workspace
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Main - Request Panel */}
-          <RequestPanel item={selectedItem} />
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <RequestPanel item={selectedItem} />
+          </div>
         </div>
       )}
     </div>
