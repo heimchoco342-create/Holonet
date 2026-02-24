@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: holonet-migrate
+  namespace: holonet
+spec:
+  template:
+    spec:
+      containers:
+      - name: migrate
+        image: holonet/server:latest  # 이미지 레지스트리에 맞게 수정
+        command: ["sh", "-c"]
+        args:
+          - |
+            cd /app/apps/server
+            echo "Running database migrations..."
+            pnpm db:migrate
+            echo "Migrations completed!"
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: holonet-server-config
+              key: DATABASE_URL
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: holonet-server-config
+              key: NODE_ENV
+      restartPolicy: Never
+  backoffLimit: 3
+
+---
+# 마이그레이션 실행 방법:
+# kubectl apply -f migrate-job.yaml
+# kubectl logs -f job/holonet-migrate -n holonet
+# kubectl delete job holonet-migrate -n holonet

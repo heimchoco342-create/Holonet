@@ -33,6 +33,7 @@
 
 * **Traffic:** `Localhost` -> `Electron Main Process` -> `K8s Tunnel` -> `Target Pod` (서버 경유 X, 로컬 직접 연결).
 * **Sync:** `Electron` <-> `Sync Server` <-> `PostgreSQL` (API 명세 데이터 동기화).
+* **Local Storage:** `Electron` -> `IndexedDB` (오프라인 모드 지원, 서버 없이도 동작 가능).
 
 ---
 
@@ -45,6 +46,7 @@
 |  | **UI** | **React + Tailwind** | Shadcn/UI 기반의 모던 다크모드 인터페이스. |
 |  | **K8s** | **@kubernetes/client-node** | `kubectl` 없이 Node.js 레벨에서 포트포워딩 스트림 제어. |
 |  | **AI** | **@modelcontextprotocol/sdk** | AI 에이전트와의 표준 통신 규격 준수. |
+|  | **Storage** | **IndexedDB** | 오프라인 모드 지원, 서버 없이도 로컬 데이터로 동작. |
 | **Server** | **Runtime** | **Node.js (Fastify)** | Express 대비 높은 처리량, 낮은 오버헤드. |
 |  | **DB** | **PostgreSQL + Prisma** | JSONB 타입을 활용한 유연한 API 명세 저장. |
 |  | **Sync** | **Socket.io** | 실시간 데이터 변경 사항 전파. |
@@ -103,6 +105,14 @@ holonet/
 * **Postman Import:** 기존 `.json` 컬렉션(v2.1) 드래그 앤 드롭 마이그레이션.
 * **Real-time Sync:** 팀원이 수정한 API 명세가 내 화면에도 즉시 반영.
 * **Environment Variables:** 팀 공유 변수(DB)와 로컬 전용 변수(Local Storage) 분리.
+* **Offline Mode (오프라인 모드):**
+  * **로컬 저장소:** 모든 Workspace, Item, Environment 데이터를 IndexedDB에 로컬 저장.
+  * **서버 없이 동작:** 백엔드 서버가 실행되지 않아도 로컬에 저장된 데이터로 완전히 동작 가능.
+  * **자동 폴백:** 서버 연결 실패 시 자동으로 로컬 데이터로 전환.
+  * **동기화 전략:**
+    * 서버 연결 시: 로컬 데이터와 서버 데이터를 병합하여 동기화.
+    * 오프라인 시: 모든 변경사항을 로컬에 저장하고, 온라인 복귀 시 자동 동기화.
+  * **데이터 우선순위:** 서버 데이터가 있으면 서버 우선, 없으면 로컬 데이터 사용.
 
 ### 5.3. The Droid Protocol (MCP Support)
 
@@ -194,6 +204,63 @@ model Environment {
 * [Client] MCP SDK 연동 및 서버 임베딩.
 * [Client] `holonet://` 리소스 프로바이더 구현.
 * [Client] `execute_tool` 핸들러 구현.
+
+### Phase 4: Offline Support (오프라인 모드)
+
+* [Client] IndexedDB 기반 로컬 저장소 구현.
+* [Client] 서버 연결 실패 시 자동 폴백 로직.
+* [Client] 오프라인/온라인 상태 감지 및 동기화 전략 구현.
+* [Client] 로컬 데이터와 서버 데이터 병합 로직.
+
+---
+
+## 8. Offline Mode Specification (오프라인 모드 상세)
+
+### 8.1. 요구사항
+
+**핵심 원칙:** 백엔드 서버가 없어도 Electron 앱이 완전히 동작해야 함.
+
+### 8.2. 저장소 구조
+
+**IndexedDB 스키마:**
+```typescript
+// 로컬 저장소 구조
+{
+  workspaces: Workspace[],
+  items: Item[],
+  environments: Environment[],
+  syncState: {
+    lastSyncTime: Date,
+    pendingChanges: Change[],
+    serverAvailable: boolean
+  }
+}
+```
+
+### 8.3. 동작 방식
+
+1. **앱 시작 시:**
+   - 서버 연결 시도
+   - 연결 성공: 서버 데이터와 로컬 데이터 병합
+   - 연결 실패: 로컬 데이터만 사용
+
+2. **데이터 읽기:**
+   - 서버 연결 시: 서버 데이터 우선, 없으면 로컬 데이터
+   - 오프라인 시: 로컬 데이터만 사용
+
+3. **데이터 쓰기:**
+   - 서버 연결 시: 서버에 저장 + 로컬에 백업
+   - 오프라인 시: 로컬에만 저장, 변경사항 큐에 추가
+
+4. **동기화:**
+   - 온라인 복귀 시: 큐에 쌓인 변경사항을 서버에 일괄 전송
+   - 충돌 해결: 서버 데이터 우선, 타임스탬프 기반 병합
+
+### 8.4. 구현 우선순위
+
+1. **Phase 4.1:** IndexedDB 기본 구조 및 CRUD
+2. **Phase 4.2:** 서버 연결 실패 시 자동 폴백
+3. **Phase 4.3:** 오프라인 변경사항 큐 및 동기화
 
 ---
 

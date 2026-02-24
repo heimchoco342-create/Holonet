@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: holonet-server-config
+  namespace: holonet
+data:
+  NODE_ENV: "production"
+  PORT: "3001"
+  DATABASE_URL: "postgresql://holonet:CHANGE_ME_TO_SECURE_PASSWORD@postgres:5432/holonet?schema=public"
+  # 외부 PostgreSQL 사용 시 위의 DATABASE_URL을 수정하세요
+  # DATABASE_URL: "postgresql://user:password@external-postgres-host:5432/holonet?schema=public"

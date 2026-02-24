@@ -1,0 +1,81 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+apps/client/.electron-builder.env
+apps/server/.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Database
+*.db
+*.sqlite
+
+# Electron build outputs
+out/
+dist-electron/
+release/
+dist/
+apps/client/out/
+apps/client/dist/
+apps/client/dist-electron/
+apps/client/release/
+
+# Generated icon files (keep SVG sources)
+apps/client/build/icon.ico
+apps/client/build/icon.icns
+apps/client/build/icon.png
+apps/client/build/icon.iconset/
+apps/client/build/icon-placeholder.png
+
+# Prisma
+apps/server/prisma/migrations/
+
+# Kubernetes secrets (contain sensitive data)
+# Note: postgres-secret.yaml.example is tracked, but postgres-secret.yaml should not be committed
+deployments/postgres-secret.yaml
+!deployments/postgres-secret.yaml.example
+deployments/*-secret.yaml
+!deployments/*-secret.yaml.example
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.old
+*~
+.cache/
+coverage/
+.vite/
+
+# Test files (격리된 테스트 디렉토리)
+tests/
+!tests/README.md

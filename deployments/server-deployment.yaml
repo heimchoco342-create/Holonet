@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: holonet-server
+  namespace: holonet
+  labels:
+    app: holonet-server
+    component: backend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: holonet-server
+  template:
+    metadata:
+      labels:
+        app: holonet-server
+        component: backend
+    spec:
+      containers:
+      - name: holonet-server
+        image: holonet/server:latest  # 이미지 레지스트리에 맞게 수정
+        # imagePullPolicy: Always  # 프로덕션에서는 Always 사용
+        ports:
+        - containerPort: 3001
+          name: http
+          protocol: TCP
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: holonet-server-config
+              key: DATABASE_URL
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: holonet-server-config
+              key: PORT
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: holonet-server-config
+              key: NODE_ENV
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      # initContainers를 사용하여 데이터베이스 마이그레이션 실행 가능
+      # initContainers:
+      # - name: migrate
+      #   image: holonet/server:latest
+      #   command: ["sh", "-c", "cd /app/apps/server && pnpm db:migrate"]
+      #   env:
+      #   - name: DATABASE_URL
+      #     valueFrom:
+      #       configMapKeyRef:
+      #         name: holonet-server-config
+      #         key: DATABASE_URL
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: holonet-server
+  namespace: holonet
+  labels:
+    app: holonet-server
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3001
+    targetPort: 3001
+    protocol: TCP
+    name: http
+  selector:
+    app: holonet-server
+
+---
+# Ingress (선택사항 - 외부 접근이 필요한 경우)
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: holonet-server-ingress
+#   namespace: holonet
+#   annotations:
+#     kubernetes.io/ingress.class: nginx
+#     cert-manager.io/cluster-issuer: letsencrypt-prod
+# spec:
+#   tls:
+#   - hosts:
+#     - holonet.example.com
+#     secretName: holonet-tls
+#   rules:
+#   - host: holonet.example.com
+#     http:
+#       paths:
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: holonet-server
+#             port:
+#               number: 3001

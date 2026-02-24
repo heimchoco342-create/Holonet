@@ -1,0 +1,7 @@
+# Kubernetes secrets (실제 비밀번호는 포함하지 않음)
+*-secret.yaml.local
+*-secret.yaml.backup
+
+# 환경별 오버라이드
+overlays/
+*.local.yaml
