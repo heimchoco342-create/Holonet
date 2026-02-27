@@ -35,7 +35,7 @@
 *   **API Mode Icon:** Postman 기능 활성화.
 *   **Cluster Mode Icon:** Lens 기능 활성화.
 *   **Sync Status:** 서버/로컬 동기화 상태 표시 (🟢 Online / 🟠 Offline).
-*   **Settings:** 테마, 단축키, 플러그인 관리.
+*   **Settings:** 테마, 단축키, 플러그인 관리. 클릭 시 **Settings Modal** 호출.
 
 ---
 
@@ -95,3 +95,24 @@
 2.  **Shell Layout:** 사이드바, 헤더, 메인 영역 레이아웃 잡기 (`Resizble Panels`).
 3.  **Navigation State:** Zustand를 사용하여 Mode(`API` vs `Cluster`) 상태 관리.
 4.  **Mock Data:** 실제 로직 연결 전, 더미 데이터로 UI 인터랙션 먼저 구현.
+
+---
+
+## 7. Settings Modal & API Key Management
+
+사용자는 **Settings** 메뉴를 통해 전역 설정을 관리할 수 있습니다.
+
+### [Modal Layout]
+*   **Sidebar (Categories):** General, Appearance, **API Keys**, Shortcuts, About.
+*   **Content Area:** 선택된 카테고리의 설정 항목 표시.
+
+### [API Keys Section]
+Deep Agents(Cyber War Room) 실행을 위해 외부 LLM Provider의 API Key가 필요합니다.
+*   **Provider List:** OpenAI, Anthropic, Google Gemini 등 지원되는 제공자 목록.
+*   **Key Input:**
+    *   **Masked Field:** 입력된 키는 기본적으로 가려짐 (`sk-....`).
+    *   **Visibility Toggle:** 눈 아이콘으로 키 확인 가능.
+    *   **Validation:** 키 형식(Regex) 또는 간단한 API 호출로 유효성 검사 (옵션).
+*   **Security:**
+    *   키는 `electron-store` 등을 통해 로컬에 암호화되어 저장되거나, OS 키체인(Keytar)을 사용해야 합니다.
+    *   UI 상에서 평문으로 노출되는 시간을 최소화합니다.

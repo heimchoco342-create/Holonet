@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Layers, Activity, Settings, RefreshCw } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { SettingsModal } from './SettingsModal';
 
 interface GlobalNavProps {
   activeView: 'api' | 'lens';
@@ -8,6 +9,8 @@ interface GlobalNavProps {
 }
 
 export function GlobalNav({ activeView, onViewChange }: GlobalNavProps) {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
   return (
     <div className="w-16 bg-[#18181b] border-r border-[#27272a] flex flex-col items-center py-4 gap-4 text-[#a1a1aa]">
       <div className="mb-4">
@@ -41,7 +44,12 @@ export function GlobalNav({ activeView, onViewChange }: GlobalNavProps) {
       <NavItem 
         icon={<Settings size={20} />} 
         label="Settings" 
-        onClick={() => {}} 
+        onClick={() => setIsSettingsOpen(true)} 
+      />
+      
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
       />
     </div>
   );

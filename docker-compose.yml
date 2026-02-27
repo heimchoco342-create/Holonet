@@ -1,8 +1,24 @@
 version: '3.8'
 
-# 기존 PostgreSQL 사용 시 아래 서비스는 사용하지 않습니다
-# 포트포워딩으로 localhost:5432에 연결하세요
-# services:
+services:
+  agent-service:
+    build:
+      context: ./apps/agent-service
+      dockerfile: Dockerfile
+    container_name: holonet-agent
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      # Connect to the host machine's server/DB if needed
+      # Or use internal networking if server is also dockerized
+    volumes:
+      - ./apps/agent-service:/app
+      - /app/node_modules
+    command: npm run dev
+
+# existing postgres service (commented out)
 #   postgres:
 #     image: postgres:16-alpine
 #     container_name: holonet-postgres

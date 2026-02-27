@@ -21,6 +21,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     start: () => ipcRenderer.invoke('mcp:start'),
     stop: () => ipcRenderer.invoke('mcp:stop'),
   },
+
+  // Settings methods
+  settings: {
+    get: (key: string) => ipcRenderer.invoke('settings:get', key),
+    set: (key: string, value: any) => ipcRenderer.invoke('settings:set', key, value),
+  },
   
   // K8s Lens methods
   lens: {

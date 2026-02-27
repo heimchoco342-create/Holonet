@@ -64,6 +64,7 @@ The "Harness" is the runtime environment that bridges the Electron Main Process 
     *   Initializes the `Commander` graph.
     *   Manages the persistent state (checkpointing) via a local SQLite/JSON database (LangGraph `checkpointer`).
     *   Handles the event stream loop.
+    *   **Secure Configuration Loading:** Reads API keys (OpenAI/Anthropic) from secure local storage (configured via UI Settings) and injects them into the agent environment variables at runtime.
 
 **Key Methods:**
 *   `initialize(campaignId: string): Promise<void>` - Hydrates the graph.

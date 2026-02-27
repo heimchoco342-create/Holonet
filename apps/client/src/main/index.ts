@@ -3,10 +3,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import http from 'http';
 import log from 'electron-log';
+import Store from 'electron-store';
 import { K8sBridge } from './k8s/bridge.js';
-import { MCPServer } from './mcp/server.js';
+// import { MCPServer } from './mcp/server.js';
 import { K8sServiceDiscovery } from './k8s/discovery.js';
 import { K8sLens } from './k8s/lens.js';
+import { AgentClient } from './api/agent-client.js';
 
 // Configure logging
 log.initialize();
@@ -23,12 +25,16 @@ process.on('uncaughtException', (error) => {
   dialog.showErrorBox('Critical Error', `An uncaught error occurred:\n\n${error.message}\n\nCheck logs for details.`);
 });
 
+// Initialize electron-store
+const store = new Store();
+
 // Keep a global reference of the window object
 let mainWindow: BrowserWindow | null = null;
 let k8sBridge: K8sBridge | null = null;
-let mcpServer: MCPServer | null = null;
+// let mcpServer: MCPServer | null = null;
 let k8sDiscovery: K8sServiceDiscovery | null = null;
 let k8sLens: K8sLens | null = null;
+let agentClient: AgentClient | null = null;
 
 function createWindow() {
   // Set app icon (optional, electron-builder will handle it in production)
@@ -163,14 +169,9 @@ app.whenReady().then(async () => {
     console.warn('Failed to initialize K8s Lens:', error);
   }
 
-  // Initialize MCP Server
-  /*
-  if (k8sBridge) {
-    mcpServer = new MCPServer(k8sBridge);
-    // mcpServer.setBridge(k8sBridge);
-    // await mcpServer.start();
-  }
-  */
+  // Initialize Agent Client
+  agentClient = new AgentClient(process.env.AGENT_SERVICE_URL || 'http://localhost:3002');
+  log.info('Agent Client initialized');
 
   // Setup IPC handlers
   setupIpcHandlers();
@@ -185,10 +186,12 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  /*
   // Cleanup
   if (k8sBridge) {
     k8sBridge.closeAllTunnels();
   }
+  */
 
   if (process.platform !== 'darwin') {
     app.quit();
@@ -266,21 +269,23 @@ function setupIpcHandlers() {
     return await k8sLens.getPodLogs(namespace, podName, tailLines);
   });
 
-  // MCP Server IPC handlers
-  ipcMain.handle('mcp:start', async () => {
-    /*
-    if (!mcpServer && k8sBridge) {
-      mcpServer = new MCPServer(k8sBridge);
-      mcpServer.setBridge(k8sBridge);
-      await mcpServer.start();
-    }
-    */
-    return { success: true };
+  // Agent Client IPC handlers
+  ipcMain.handle('agent:send-task', async (_, task: string, context?: any) => {
+    if (!agentClient) throw new Error('Agent client not initialized');
+    return await agentClient.sendTask(task, context);
   });
 
-  ipcMain.handle('mcp:stop', async () => {
-    // MCP server cleanup if needed
-    mcpServer = null;
-    return { success: true };
+  ipcMain.handle('agent:get-status', async () => {
+    if (!agentClient) throw new Error('Agent client not initialized');
+    return await agentClient.getStatus();
+  });
+
+  // Settings IPC handlers
+  ipcMain.handle('settings:get', async (_, key: string) => {
+    return store.get(key);
+  });
+
+  ipcMain.handle('settings:set', async (_, key: string, value: any) => {
+    store.set(key, value);
   });
 }

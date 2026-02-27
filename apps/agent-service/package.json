@@ -1,0 +1,28 @@
+{
+  "name": "agent-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@fastify/websocket": "^11.2.0",
+    "@langchain/core": "^1.1.29",
+    "@langchain/langgraph": "^1.2.0",
+    "@langchain/openai": "^1.2.11",
+    "dotenv": "^17.3.1",
+    "fastify": "^5.7.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
