@@ -34,11 +34,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.ico",
@@ -48,7 +52,10 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "icon": "build/icon.icns",
@@ -58,11 +65,15 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.png",
@@ -80,9 +91,12 @@
     "@kubernetes/client-node": "^0.20.0",
     "@modelcontextprotocol/sdk": "^0.5.0",
     "axios": "^1.6.2",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.575.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "socket.io-client": "^4.5.4",
+    "tailwind-merge": "^3.5.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
