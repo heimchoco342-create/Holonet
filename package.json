@@ -33,7 +33,11 @@
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"
   },
-  "dependencies": {
-    "electron-log": "^5.4.3"
+  "pnpm": {
+    "overrides": {
+      "tar": "7.4.3",
+      "minipass": "^7.0.0",
+      "minizlib": "^3.0.0"
+    }
   }
 }

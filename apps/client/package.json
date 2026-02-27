@@ -9,7 +9,7 @@
   "type": "module",
   "main": "out/main/index.js",
   "scripts": {
-    "postinstall": "node scripts/postinstall.js",
+    "postinstall": "electron-builder install-app-deps",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
@@ -29,6 +29,7 @@
       "out/**/*",
       "package.json"
     ],
+    "asar": false,
     "win": {
       "target": [
         {
@@ -83,7 +84,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    }
+    },
+    "npmRebuild": true
   },
   "dependencies": {
     "@holonet/shared": "workspace:*",
@@ -91,6 +93,7 @@
     "@modelcontextprotocol/sdk": "^0.5.0",
     "axios": "^1.6.2",
     "clsx": "^2.1.1",
+    "electron-log": "^5.4.3",
     "lucide-react": "^0.575.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

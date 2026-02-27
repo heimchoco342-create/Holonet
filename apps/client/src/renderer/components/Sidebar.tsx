@@ -23,26 +23,44 @@ export function Sidebar({
   if (activeView === 'api') {
     return (
       <div className="w-64 bg-[#1e1e1e] border-r border-[#27272a] flex flex-col h-full">
-        <div className="p-3 border-b border-[#27272a] font-medium text-xs text-[#a1a1aa] uppercase tracking-wider">
-          Workspaces
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          <WorkspaceList
-            onSelect={onSelectWorkspace}
-            selectedId={selectedWorkspace?.id}
-          />
-          {selectedWorkspace && (
-            <div className="mt-4 border-t border-[#27272a]">
-              <div className="p-3 font-medium text-xs text-[#a1a1aa] uppercase tracking-wider">
-                Collections
-              </div>
+        {/* Collections Section - Prioritized at the top */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="p-3 border-b border-[#27272a] flex items-center justify-between sticky top-0 bg-[#1e1e1e] z-10">
+            <span className="font-semibold text-xs text-[#e4e4e7] uppercase tracking-wider flex items-center gap-2">
+              <FileJson size={14} className="text-blue-500" />
+              Collections
+            </span>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto">
+            {selectedWorkspace ? (
               <CollectionTree
                 workspace={selectedWorkspace}
                 onSelectItem={onSelectItem}
                 selectedId={selectedItem?.id}
               />
-            </div>
-          )}
+            ) : (
+              <div className="p-4 text-xs text-[#71717a] text-center">
+                Select a workspace to view collections
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Workspaces Section - Moved to bottom */}
+        <div className="border-t border-[#27272a] bg-[#18181b]">
+          <div className="p-3 border-b border-[#27272a] flex items-center gap-2">
+            <Server size={14} className="text-[#a1a1aa]" />
+            <span className="font-medium text-xs text-[#a1a1aa] uppercase tracking-wider">
+              Workspaces
+            </span>
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            <WorkspaceList
+              onSelect={onSelectWorkspace}
+              selectedId={selectedWorkspace?.id}
+            />
+          </div>
         </div>
       </div>
     );
