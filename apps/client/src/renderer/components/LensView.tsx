@@ -1,282 +1,180 @@
 import React, { useState, useEffect } from 'react';
+import { cn } from '../utils/cn';
+import { Box, Circle, RefreshCw, Terminal, Search, Filter } from 'lucide-react';
 
-interface K8sNamespace {
-  name: string;
-  status: string;
-}
-
-interface K8sPod {
+interface Pod {
+  kind: string;
   name: string;
   namespace: string;
   status: string;
-  ready: string;
-  restarts: number;
-  age: string;
+  creationTimestamp: string;
+  details: {
+    podIP?: string;
+    nodeName?: string;
+    restarts?: number;
+  };
 }
-
-interface K8sDeployment {
-  name: string;
-  namespace: string;
-  ready: string;
-  upToDate: number;
-  available: number;
-  age: string;
-}
-
-interface K8sService {
-  name: string;
-  namespace: string;
-  type: string;
-  clusterIP: string;
-  ports: string;
-  age: string;
-}
-
-type ResourceType = 'pods' | 'deployments' | 'services';
 
 export function LensView() {
-  const [namespaces, setNamespaces] = useState<K8sNamespace[]>([]);
+  const [pods, setPods] = useState<Pod[]>([]);
+  const [namespaces, setNamespaces] = useState<string[]>(['default']);
   const [selectedNamespace, setSelectedNamespace] = useState<string>('default');
-  const [resourceType, setResourceType] = useState<ResourceType>('pods');
-  const [resources, setResources] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedResource, setSelectedResource] = useState<any | null>(null);
-  const [logs, setLogs] = useState<string>('');
+  const [filter, setFilter] = useState('');
 
   useEffect(() => {
     loadNamespaces();
-  }, []);
-
-  useEffect(() => {
-    if (selectedNamespace) {
-      loadResources();
-    }
-  }, [selectedNamespace, resourceType]);
+    loadPods();
+  }, [selectedNamespace]);
 
   const loadNamespaces = async () => {
     try {
-      if (!window.electronAPI?.lens) return;
-      const ns = await window.electronAPI.lens.getNamespaces();
-      setNamespaces(ns);
-      if (ns.length > 0 && !selectedNamespace) {
-        // Default to 'default' if it exists, otherwise first one
-        const defaultNs = ns.find(n => n.name === 'default');
-        setSelectedNamespace(defaultNs ? 'default' : ns[0].name);
+      if (window.electronAPI?.lens) {
+        const ns = await window.electronAPI.lens.getNamespaces();
+        setNamespaces(ns.length > 0 ? ns : ['default']);
       }
     } catch (error) {
       console.error('Failed to load namespaces:', error);
     }
   };
 
-  const loadResources = async () => {
-    if (!selectedNamespace || !window.electronAPI?.lens) return;
-    
+  const loadPods = async () => {
     setLoading(true);
     try {
-      let data: any[] = [];
-      switch (resourceType) {
-        case 'pods':
-          data = await window.electronAPI.lens.getPods(selectedNamespace);
-          break;
-        case 'deployments':
-          data = await window.electronAPI.lens.getDeployments(selectedNamespace);
-          break;
-        case 'services':
-          data = await window.electronAPI.lens.getServices(selectedNamespace);
-          break;
+      if (window.electronAPI?.lens) {
+        const podList = await window.electronAPI.lens.getPods(selectedNamespace);
+        setPods(podList);
       }
-      setResources(data);
     } catch (error) {
-      console.error('Failed to load resources:', error);
+      console.error('Failed to load pods:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResourceClick = async (resource: any) => {
-    setSelectedResource(resource);
-    if (resourceType === 'pods') {
-      try {
-        const podLogs = await window.electronAPI?.lens?.getPodLogs(
-          resource.namespace,
-          resource.name,
-          100
-        );
-        setLogs(podLogs || '');
-      } catch (error) {
-        console.error('Failed to load pod logs:', error);
-        setLogs('');
-      }
-    } else {
-      try {
-        const details = await window.electronAPI?.lens?.getResourceDetails(
-          resourceType === 'deployments' ? 'deployment' : 'service',
-          resource.name,
-          resource.namespace
-        );
-        setSelectedResource(details);
-      } catch (error) {
-        console.error('Failed to load resource details:', error);
-      }
-    }
-  };
+  const filteredPods = pods.filter(pod => 
+    pod.name.toLowerCase().includes(filter.toLowerCase())
+  );
 
   return (
-    <div className="flex-1 bg-[#0a0a0a] flex flex-col h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-[#2a2a2a]">
+    <div className="flex flex-col h-full bg-[#1e1e1e] text-[#cccccc]">
+      {/* Header / Toolbar */}
+      <div className="flex items-center justify-between p-4 border-b border-[#27272a] bg-[#252526]">
         <div className="flex items-center gap-4">
-          <h2 className="text-lg font-semibold text-white">🔭 Lens - K8s Cluster</h2>
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Box size={20} className="text-blue-400" />
+            Pods
+          </h2>
           
-          <select
-            value={selectedNamespace}
-            onChange={(e) => setSelectedNamespace(e.target.value)}
-            className="px-3 py-1.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded text-sm text-white focus:outline-none focus:border-blue-500"
-          >
-            {namespaces.length === 0 && <option value="default">default</option>}
-            {namespaces.map((ns) => (
-              <option key={ns.name} value={ns.name}>
-                {ns.name} ({ns.status})
-              </option>
-            ))}
-          </select>
-
-          <div className="flex gap-2">
-            {(['pods', 'deployments', 'services'] as ResourceType[]).map((type) => (
-              <button
-                key={type}
-                onClick={() => setResourceType(type)}
-                className={`px-3 py-1.5 rounded text-sm font-medium ${
-                  resourceType === type
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-[#1a1a1a] text-gray-300 hover:bg-[#2a2a2a]'
-                }`}
-              >
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </button>
-            ))}
+          <div className="relative">
+            <select 
+              value={selectedNamespace}
+              onChange={(e) => setSelectedNamespace(e.target.value)}
+              className="bg-[#333333] text-sm text-white border border-[#3e3e3e] rounded px-3 py-1 pr-8 outline-none focus:border-blue-500 appearance-none min-w-[150px]"
+            >
+              {namespaces.map(ns => (
+                <option key={ns} value={ns}>{ns}</option>
+              ))}
+            </select>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 1L5 5L9 1" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
           </div>
-          <button
-            onClick={loadResources}
-            className="px-3 py-1.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded text-sm text-white hover:bg-[#2a2a2a]"
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#a1a1aa]" />
+            <input 
+              type="text" 
+              placeholder="Filter..." 
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="bg-[#1e1e1e] border border-[#3e3e3e] rounded-full pl-8 pr-4 py-1 text-sm focus:outline-none focus:border-blue-500 w-48 transition-all"
+            />
+          </div>
+          
+          <button 
+            onClick={loadPods} 
+            className={cn(
+              "p-2 rounded-md hover:bg-[#333333] transition-colors",
+              loading && "animate-spin text-blue-400"
+            )}
+            title="Refresh"
           >
-            🔄 Refresh
+            <RefreshCw size={16} />
           </button>
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Resource List */}
-        <div className="w-1/2 border-r border-[#2a2a2a] overflow-y-auto">
-          {loading ? (
-            <div className="p-4 text-center text-gray-500">Loading...</div>
-          ) : resources.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">No resources found</div>
-          ) : (
-            <div className="p-4">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[#2a2a2a] text-gray-400">
-                    <th className="text-left p-2">Name</th>
-                    <th className="text-left p-2">Status</th>
-                    {resourceType === 'pods' && (
-                      <>
-                        <th className="text-left p-2">Ready</th>
-                        <th className="text-left p-2">Restarts</th>
-                      </>
-                    )}
-                    {resourceType === 'deployments' && (
-                      <>
-                        <th className="text-left p-2">Ready</th>
-                        <th className="text-left p-2">Available</th>
-                      </>
-                    )}
-                    {resourceType === 'services' && (
-                      <>
-                        <th className="text-left p-2">Type</th>
-                        <th className="text-left p-2">Cluster IP</th>
-                      </>
-                    )}
-                    <th className="text-left p-2">Age</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resources.map((resource) => (
-                    <tr
-                      key={resource.name}
-                      onClick={() => handleResourceClick(resource)}
-                      className={`border-b border-[#2a2a2a] cursor-pointer hover:bg-[#1a1a1a] ${
-                        selectedResource?.name === resource.name ? 'bg-[#1a1a1a]' : ''
-                      }`}
-                    >
-                      <td className="p-2 text-white">{resource.name}</td>
-                      <td className="p-2">
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs ${
-                            resource.status === 'Running' || resource.status === 'Active'
-                              ? 'bg-green-900 text-green-300'
-                              : resource.status === 'Pending'
-                              ? 'bg-yellow-900 text-yellow-300'
-                              : 'bg-red-900 text-red-300'
-                          }`}
-                        >
-                          {resource.status}
-                        </span>
-                      </td>
-                      {resourceType === 'pods' && (
-                        <>
-                          <td className="p-2 text-gray-300">{resource.ready}</td>
-                          <td className="p-2 text-gray-300">{resource.restarts}</td>
-                        </>
-                      )}
-                      {resourceType === 'deployments' && (
-                        <>
-                          <td className="p-2 text-gray-300">{resource.ready}</td>
-                          <td className="p-2 text-gray-300">{resource.available}</td>
-                        </>
-                      )}
-                      {resourceType === 'services' && (
-                        <>
-                          <td className="p-2 text-gray-300">{resource.type}</td>
-                          <td className="p-2 text-gray-300">{resource.clusterIP}</td>
-                        </>
-                      )}
-                      <td className="p-2 text-gray-400">{resource.age}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+      {/* Data Table */}
+      <div className="flex-1 overflow-auto">
+        <table className="w-full text-left text-sm border-collapse">
+          <thead className="bg-[#252526] sticky top-0 z-10 shadow-sm">
+            <tr>
+              <th className="px-4 py-2 font-medium text-[#a1a1aa] border-b border-[#27272a]">Name</th>
+              <th className="px-4 py-2 font-medium text-[#a1a1aa] border-b border-[#27272a]">Namespace</th>
+              <th className="px-4 py-2 font-medium text-[#a1a1aa] border-b border-[#27272a]">Status</th>
+              <th className="px-4 py-2 font-medium text-[#a1a1aa] border-b border-[#27272a]">Restarts</th>
+              <th className="px-4 py-2 font-medium text-[#a1a1aa] border-b border-[#27272a]">Age</th>
+              <th className="px-4 py-2 font-medium text-[#a1a1aa] border-b border-[#27272a]">IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredPods.map((pod) => (
+              <tr key={pod.name} className="hover:bg-[#2a2d2e] border-b border-[#27272a] group transition-colors">
+                <td className="px-4 py-2 font-medium text-white flex items-center gap-2">
+                  <Box size={14} className="text-blue-400" />
+                  {pod.name}
+                </td>
+                <td className="px-4 py-2 text-[#a1a1aa]">{pod.namespace}</td>
+                <td className="px-4 py-2">
+                  <span className={cn(
+                    "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border",
+                    pod.status === 'Running' 
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
+                      : pod.status === 'Pending'
+                      ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                      : "bg-red-500/10 text-red-400 border-red-500/20"
+                  )}>
+                    <Circle size={6} fill="currentColor" />
+                    {pod.status}
+                  </span>
+                </td>
+                <td className="px-4 py-2 text-[#a1a1aa]">
+                  {pod.details.restarts || 0}
+                </td>
+                <td className="px-4 py-2 text-[#a1a1aa]">
+                  {new Date(pod.creationTimestamp).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-2 font-mono text-xs text-[#a1a1aa]">
+                  {pod.details.podIP || '-'}
+                </td>
+              </tr>
+            ))}
+            
+            {!loading && filteredPods.length === 0 && (
+              <tr>
+                <td colSpan={6} className="text-center py-12 text-[#52525b]">
+                  {filter ? 'No pods found matching filter.' : 'No pods found in this namespace.'}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-        {/* Resource Details */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {selectedResource ? (
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">
-                {selectedResource.name || selectedResource.metadata?.name}
-              </h3>
-              {resourceType === 'pods' && logs && (
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-300 mb-2">Logs</h4>
-                  <pre className="bg-[#1a1a1a] rounded p-3 font-mono text-xs text-white overflow-x-auto max-h-96 overflow-y-auto">
-                    {logs}
-                  </pre>
-                </div>
-              )}
-              <div>
-                <h4 className="text-sm font-medium text-gray-300 mb-2">Details</h4>
-                <pre className="bg-[#1a1a1a] rounded p-3 font-mono text-xs text-white overflow-x-auto">
-                  {JSON.stringify(selectedResource, null, 2)}
-                </pre>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center text-gray-500 py-8">
-              Select a resource to view details
-            </div>
-          )}
+      {/* Footer / Status */}
+      <div className="h-8 bg-[#007acc] text-white flex items-center px-4 text-xs justify-between">
+        <div className="flex items-center gap-4">
+          <span>Namespace: <strong>{selectedNamespace}</strong></span>
+          <span>Count: <strong>{filteredPods.length}</strong></span>
+        </div>
+        <div className="flex items-center gap-2 hover:bg-white/10 px-2 py-0.5 rounded cursor-pointer transition-colors">
+          <Terminal size={12} />
+          <span>Terminal</span>
         </div>
       </div>
     </div>
