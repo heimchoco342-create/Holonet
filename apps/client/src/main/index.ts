@@ -3,19 +3,16 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import http from 'http';
 import log from 'electron-log';
-import { K8sBridge } from './k8s/bridge.js';
-import { MCPServer } from './mcp/server.js';
-import { K8sServiceDiscovery } from './k8s/discovery.js';
-import { K8sLens } from './k8s/lens.js';
+// import { K8sBridge } from './k8s/bridge.js';
+// import { MCPServer } from './mcp/server.js';
+// import { K8sServiceDiscovery } from './k8s/discovery.js';
+// import { K8sLens } from './k8s/lens.js';
 
 // Configure logging
 log.initialize();
 log.transports.file.level = 'info';
 log.transports.console.level = 'debug';
-console.log = log.log;
-console.error = log.error;
-console.warn = log.warn;
-console.info = log.info;
+Object.assign(console, log.functions);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,10 +25,10 @@ process.on('uncaughtException', (error) => {
 
 // Keep a global reference of the window object
 let mainWindow: BrowserWindow | null = null;
-let k8sBridge: K8sBridge | null = null;
-let mcpServer: MCPServer | null = null;
-let k8sDiscovery: K8sServiceDiscovery | null = null;
-let k8sLens: K8sLens | null = null;
+// let k8sBridge: K8sBridge | null = null;
+// let mcpServer: MCPServer | null = null;
+// let k8sDiscovery: K8sServiceDiscovery | null = null;
+// let k8sLens: K8sLens | null = null;
 
 function createWindow() {
   // Set app icon (optional, electron-builder will handle it in production)
@@ -143,6 +140,8 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  log.info('App starting...');
+  /*
   // Initialize K8s Bridge
   k8sBridge = new K8sBridge();
   try {
@@ -163,12 +162,10 @@ app.whenReady().then(async () => {
   } catch (error) {
     console.warn('Failed to initialize K8s Lens:', error);
   }
-
-  // Initialize MCP Server (optional, can be started on demand)
-  // MCP server will be created when needed via IPC
+  */
 
   // Setup IPC handlers
-  setupIpcHandlers();
+  // setupIpcHandlers();
 
   createWindow();
 
@@ -180,100 +177,20 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  /*
   // Cleanup
   if (k8sBridge) {
     k8sBridge.closeAllTunnels();
   }
+  */
 
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
+/*
 function setupIpcHandlers() {
-  // K8s Bridge IPC handlers
-  ipcMain.handle('k8s:get-contexts', async () => {
-    if (!k8sBridge) return [];
-    return k8sBridge.getContexts();
-  });
-
-  ipcMain.handle('k8s:set-context', async (_, contextName: string) => {
-    if (!k8sBridge) return;
-    await k8sBridge.initialize(contextName);
-  });
-
-  ipcMain.handle('k8s:process-request', async (_, request: any) => {
-    if (!k8sBridge) {
-      return { url: request.url, originalUrl: request.url };
-    }
-    return await k8sBridge.processRequest(request);
-  });
-
-  ipcMain.handle('k8s:close-tunnel', async (_, item: any) => {
-    if (!k8sBridge) return;
-    k8sBridge.closeTunnel(item);
-  });
-
-  ipcMain.handle('k8s:discover-services', async (_, contextName?: string) => {
-    if (!k8sDiscovery) return [];
-    return await k8sDiscovery.discoverAllServices(contextName);
-  });
-
-  ipcMain.handle('k8s:discover-services-namespace', async (_, namespace: string, contextName?: string) => {
-    if (!k8sDiscovery) return [];
-    return await k8sDiscovery.discoverServicesInNamespace(namespace, contextName);
-  });
-
-  // K8s Lens IPC handlers
-  ipcMain.handle('lens:get-namespaces', async (_, contextName?: string) => {
-    if (!k8sLens) return [];
-    await k8sLens.initialize(contextName);
-    return await k8sLens.getNamespaces();
-  });
-
-  ipcMain.handle('lens:get-pods', async (_, namespace: string, contextName?: string) => {
-    if (!k8sLens) return [];
-    await k8sLens.initialize(contextName);
-    return await k8sLens.getPods(namespace);
-  });
-
-  ipcMain.handle('lens:get-deployments', async (_, namespace: string, contextName?: string) => {
-    if (!k8sLens) return [];
-    await k8sLens.initialize(contextName);
-    return await k8sLens.getDeployments(namespace);
-  });
-
-  ipcMain.handle('lens:get-services', async (_, namespace: string, contextName?: string) => {
-    if (!k8sLens) return [];
-    await k8sLens.initialize(contextName);
-    return await k8sLens.getServices(namespace);
-  });
-
-  ipcMain.handle('lens:get-resource-details', async (_, kind: string, name: string, namespace: string, contextName?: string) => {
-    if (!k8sLens) throw new Error('K8s Lens not initialized');
-    await k8sLens.initialize(contextName);
-    return await k8sLens.getResourceDetails(kind, name, namespace);
-  });
-
-  ipcMain.handle('lens:get-pod-logs', async (_, namespace: string, podName: string, tailLines?: number, contextName?: string) => {
-    if (!k8sLens) return '';
-    await k8sLens.initialize(contextName);
-    return await k8sLens.getPodLogs(namespace, podName, tailLines);
-  });
-
-  // MCP Server IPC handlers
-  ipcMain.handle('mcp:start', async () => {
-    if (!mcpServer && k8sBridge) {
-      mcpServer = new MCPServer(k8sBridge);
-      mcpServer.setBridge(k8sBridge);
-      await mcpServer.start();
-    }
-    return { success: true };
-  });
-
-  ipcMain.handle('mcp:stop', async () => {
-    // MCP server cleanup if needed
-    mcpServer = null;
-    return { success: true };
-  });
+  // ... (Commented out IPC handlers)
 }
+*/
