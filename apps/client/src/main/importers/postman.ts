@@ -1,4 +1,5 @@
-import { CreateItemDto } from '@holonet/shared';
+import { Workspace, Item, ItemType, Protocol, HttpMethod, Environment } from '@holonet/shared';
+import { randomUUID } from 'crypto';
 
 export interface PostmanCollection {
   info: {
@@ -14,18 +15,18 @@ export interface PostmanItem {
   item?: PostmanItem[];
   request?: {
     method?: string;
-    header?: Array<{ key: string; value: string }>;
+    header?: Array<{ key: string; value: string; disabled?: boolean }>;
     body?: {
       mode?: string;
       raw?: string;
-      formdata?: Array<{ key: string; value: string }>;
-      urlencoded?: Array<{ key: string; value: string }>;
+      formdata?: Array<{ key: string; value: string; disabled?: boolean }>;
+      urlencoded?: Array<{ key: string; value: string; disabled?: boolean }>;
     };
     url?: {
       raw?: string;
-      host?: string[];
-      path?: string[];
-      query?: Array<{ key: string; value: string }>;
+      host?: string[] | string;
+      path?: string[] | string;
+      query?: Array<{ key: string; value: string; disabled?: boolean }>;
     };
   };
   response?: any[];
@@ -39,134 +40,189 @@ export interface PostmanVariable {
 
 export class PostmanImporter {
   /**
-   * Import Postman collection v2.1 format
+   * Parse Postman collection v2.1 JSON string into a Holonet Workspace
    */
-  static import(collection: PostmanCollection, workspaceId: string): {
-    items: CreateItemDto[];
-    environments: Array<{ name: string; variables: Record<string, any> }>;
-  } {
-    const items: CreateItemDto[] = [];
-    const environments: Array<{ name: string; variables: Record<string, any> }> = [];
-
-    // Convert Postman variables to environment
-    if (collection.variable && collection.variable.length > 0) {
-      const variables: Record<string, any> = {};
-      for (const variable of collection.variable) {
-        variables[variable.key] = variable.value;
-      }
-      environments.push({
-        name: 'Imported from Postman',
-        variables,
-      });
+  async parse(jsonString: string): Promise<Workspace> {
+    console.log('PostmanImporter: parsing collection...');
+    
+    let collection: PostmanCollection;
+    try {
+      collection = JSON.parse(jsonString);
+    } catch (error) {
+      console.error('PostmanImporter: Invalid JSON string', error);
+      throw new Error('Invalid JSON string provided for Postman import');
     }
 
-    // Convert Postman items to Holonet items
-    // Use temp IDs for folders that will be replaced after creation
-    let tempIdCounter = 0;
-    const convertItems = (
-      postmanItems: PostmanItem[],
-      parentId: string | null = null,
-      sortOrder: number = 0
-    ): CreateItemDto[] => {
-      const result: CreateItemDto[] = [];
+    if (!collection.info || !collection.item) {
+      console.error('PostmanImporter: Invalid Postman collection format');
+      throw new Error('Invalid Postman collection format: missing info or item');
+    }
 
-      for (const postmanItem of postmanItems) {
-        if (postmanItem.item) {
-          // This is a folder - assign temp ID
-          const tempFolderId = `temp-folder-${tempIdCounter++}`;
-          const folder: CreateItemDto & { tempId?: string } = {
-            workspaceId,
-            parentId,
-            type: 'FOLDER',
-            name: postmanItem.name,
-            sortOrder: sortOrder++,
-            tempId: tempFolderId,
-          };
-          result.push(folder);
+    console.log(`PostmanImporter: Found collection "${collection.info.name}"`);
 
-          // Process children with temp folder ID as parent
-          const children = convertItems(postmanItem.item, tempFolderId, 0);
-          result.push(...children);
-        } else if (postmanItem.request) {
-          // This is a request
-          const request = postmanItem.request;
-          const url = this.buildUrl(request.url);
-          const headers = this.buildHeaders(request.header);
-          const body = this.buildBody(request.body);
+    const workspaceId = randomUUID();
+    const now = new Date();
 
-          const item: CreateItemDto = {
-            workspaceId,
-            parentId,
-            type: 'REQUEST',
-            name: postmanItem.name,
-            sortOrder: sortOrder++,
-            method: (request.method || 'GET').toUpperCase() as any,
-            url,
-            headers: headers && Object.keys(headers).length > 0 ? headers : undefined,
-            body: body && Object.keys(body).length > 0 ? body : undefined,
-          };
-          result.push(item);
-        }
-      }
-
-      return result;
+    const workspace: Workspace = {
+      id: workspaceId,
+      name: collection.info.name,
+      items: [],
+      environments: [],
+      createdAt: now,
+      updatedAt: now,
     };
 
-    items.push(...convertItems(collection.item));
+    // Convert Variables to Environment
+    if (collection.variable && collection.variable.length > 0) {
+      console.log(`PostmanImporter: Found ${collection.variable.length} variables`);
+      const variables: Record<string, any> = {};
+      for (const v of collection.variable) {
+        variables[v.key] = v.value;
+      }
 
-    return { items, environments };
+      const env: Environment = {
+        id: randomUUID(),
+        workspaceId,
+        name: 'Postman Variables',
+        variables,
+        createdAt: now,
+        updatedAt: now,
+      };
+      workspace.environments.push(env);
+    }
+
+    // Convert Items
+    workspace.items = this.convertItems(collection.item, workspaceId, null);
+    
+    console.log(`PostmanImporter: Parsed ${workspace.items.length} root items`);
+    
+    return workspace;
+  }
+
+  private convertItems(
+    postmanItems: PostmanItem[],
+    workspaceId: string,
+    parentId: string | null
+  ): Item[] {
+    const items: Item[] = [];
+    const now = new Date();
+
+    postmanItems.forEach((pItem, index) => {
+      const id = randomUUID();
+      const sortOrder = index;
+
+      if (pItem.item) {
+        // Folder
+        const folder: Item = {
+          id,
+          workspaceId,
+          parentId,
+          type: 'FOLDER',
+          name: pItem.name,
+          sortOrder,
+          children: [],
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        // Recursively process children
+        folder.children = this.convertItems(pItem.item, workspaceId, id);
+        items.push(folder);
+      } else if (pItem.request) {
+        // Request
+        const request = pItem.request;
+        const method = (request.method || 'GET').toUpperCase() as HttpMethod;
+        const url = this.buildUrl(request.url);
+        const headers = this.buildHeaders(request.header);
+        const body = this.buildBody(request.body);
+
+        const item: Item = {
+          id,
+          workspaceId,
+          parentId,
+          type: 'REQUEST',
+          name: pItem.name,
+          sortOrder,
+          protocol: 'HTTP',
+          method,
+          url,
+          headers,
+          body,
+          children: [],
+          createdAt: now,
+          updatedAt: now,
+        };
+        items.push(item);
+      }
+    });
+
+    return items;
   }
 
   /**
    * Build URL from Postman URL object
    */
-  private static buildUrl(url?: PostmanItem['request']['url']): string | undefined {
+  private buildUrl(url?: PostmanItem['request']['url']): string | undefined {
     if (!url) return undefined;
 
     if (url.raw) {
       return url.raw;
     }
 
-    const host = url.host?.join('.') || '';
-    const path = url.path?.join('/') || '';
-    const query = url.query
-      ?.map((q) => `${encodeURIComponent(q.key)}=${encodeURIComponent(q.value)}`)
-      .join('&');
+    // Handle object format
+    // Postman 2.1 URL can be an object with host, path, query
+    const host = Array.isArray(url.host) ? url.host.join('.') : (url.host || '');
+    const path = Array.isArray(url.path) ? url.path.join('/') : (url.path || '');
+    
+    let queryString = '';
+    if (url.query && Array.isArray(url.query)) {
+      const params = url.query
+        .filter(q => !q.disabled) // Skip disabled query params
+        .map(q => `${encodeURIComponent(q.key)}=${encodeURIComponent(q.value)}`)
+        .join('&');
+      if (params) {
+        queryString = `?${params}`;
+      }
+    }
 
     let fullUrl = host;
     if (path) {
+      // Ensure host doesn't end with / and path doesn't start with / if we concat
+      // But typically join('/') handles the path parts.
+      // If host exists and path exists, we might need a slash.
+      // However, usually host is just domain.
       fullUrl += `/${path}`;
     }
-    if (query) {
-      fullUrl += `?${query}`;
-    }
-
-    return fullUrl || undefined;
+    
+    return (fullUrl + queryString) || undefined;
   }
 
   /**
    * Build headers object from Postman header array
    */
-  private static buildHeaders(
+  private buildHeaders(
     headers?: PostmanItem['request']['header']
   ): Record<string, any> | undefined {
-    if (!headers || headers.length === 0) return undefined;
+    if (!headers || !Array.isArray(headers) || headers.length === 0) return undefined;
 
     const result: Record<string, any> = {};
     for (const header of headers) {
-      result[header.key] = header.value;
+      if (!header.disabled) { // Skip disabled headers
+         result[header.key] = header.value;
+      }
     }
-    return result;
+    return Object.keys(result).length > 0 ? result : undefined;
   }
 
   /**
    * Build body object from Postman body
    */
-  private static buildBody(body?: PostmanItem['request']['body']): Record<string, any> | undefined {
+  private buildBody(body?: PostmanItem['request']['body']): Record<string, any> | undefined {
     if (!body) return undefined;
 
     if (body.mode === 'raw' && body.raw) {
       try {
+        // Try parsing JSON if possible, otherwise treat as raw string
         return JSON.parse(body.raw);
       } catch {
         return { raw: body.raw };
@@ -176,7 +232,9 @@ export class PostmanImporter {
     if (body.mode === 'formdata' && body.formdata) {
       const result: Record<string, any> = {};
       for (const field of body.formdata) {
-        result[field.key] = field.value;
+        if (!field.disabled) {
+           result[field.key] = field.value;
+        }
       }
       return result;
     }
@@ -184,7 +242,9 @@ export class PostmanImporter {
     if (body.mode === 'urlencoded' && body.urlencoded) {
       const result: Record<string, any> = {};
       for (const field of body.urlencoded) {
-        result[field.key] = field.value;
+         if (!field.disabled) {
+            result[field.key] = field.value;
+         }
       }
       return result;
     }
