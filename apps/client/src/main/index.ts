@@ -1,14 +1,30 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import http from 'http';
+import log from 'electron-log';
 import { K8sBridge } from './k8s/bridge.js';
 import { MCPServer } from './mcp/server.js';
 import { K8sServiceDiscovery } from './k8s/discovery.js';
 import { K8sLens } from './k8s/lens.js';
 
+// Configure logging
+log.initialize();
+log.transports.file.level = 'info';
+log.transports.console.level = 'debug';
+console.log = log.log;
+console.error = log.error;
+console.warn = log.warn;
+console.info = log.info;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Global Error Handler
+process.on('uncaughtException', (error) => {
+  log.error('Uncaught Exception:', error);
+  dialog.showErrorBox('Critical Error', `An uncaught error occurred:\n\n${error.message}\n\nCheck logs for details.`);
+});
 
 // Keep a global reference of the window object
 let mainWindow: BrowserWindow | null = null;
