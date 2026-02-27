@@ -39,5 +39,11 @@
       "minipass": "^7.0.0",
       "minizlib": "^3.0.0"
     }
+  },
+  "dependencies": {
+    "@langchain/core": "^1.1.29",
+    "@langchain/langgraph": "^1.2.0",
+    "@langchain/openai": "^1.2.11",
+    "zod": "^3.25.76"
   }
 }
