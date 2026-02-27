@@ -5,7 +5,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter client dev",
+    "dev": "concurrently -n \"server,client\" -c \"blue,magenta\" \"pnpm --filter server dev\" \"pnpm --filter client dev\"",
+    "dev:client": "pnpm --filter client dev",
     "dev:server": "pnpm --filter server dev",
     "build": "pnpm -r build",
     "build:client": "pnpm --filter client build",
@@ -23,9 +24,10 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@vitest/ui": "^1.0.4",
+    "concurrently": "^9.2.1",
     "typescript": "^5.3.3",
-    "vitest": "^1.0.4",
-    "@vitest/ui": "^1.0.4"
+    "vitest": "^1.0.4"
   },
   "engines": {
     "node": ">=18.0.0",
