@@ -36,7 +36,7 @@ type ResourceType = 'pods' | 'deployments' | 'services';
 
 export function LensView() {
   const [namespaces, setNamespaces] = useState<K8sNamespace[]>([]);
-  const [selectedNamespace, setSelectedNamespace] = useState<string>('dev'); // Hardcoded to 'dev'
+  const [selectedNamespace, setSelectedNamespace] = useState<string>('default');
   const [resourceType, setResourceType] = useState<ResourceType>('pods');
   const [resources, setResources] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,13 +57,11 @@ export function LensView() {
     try {
       if (!window.electronAPI?.lens) return;
       const ns = await window.electronAPI.lens.getNamespaces();
-      // Filter to only show 'dev' namespace
-      const devNamespace = ns.find(n => n.name === 'dev');
-      if (devNamespace) {
-        setNamespaces([devNamespace]);
-        setSelectedNamespace('dev');
-      } else {
-        setNamespaces([]);
+      setNamespaces(ns);
+      if (ns.length > 0 && !selectedNamespace) {
+        // Default to 'default' if it exists, otherwise first one
+        const defaultNs = ns.find(n => n.name === 'default');
+        setSelectedNamespace(defaultNs ? 'default' : ns[0].name);
       }
     } catch (error) {
       console.error('Failed to load namespaces:', error);
@@ -129,9 +127,20 @@ export function LensView() {
       <div className="p-4 border-b border-[#2a2a2a]">
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-semibold text-white">🔭 Lens - K8s Cluster</h2>
-          <div className="px-3 py-1.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded text-sm text-white">
-            dev
-          </div>
+          
+          <select
+            value={selectedNamespace}
+            onChange={(e) => setSelectedNamespace(e.target.value)}
+            className="px-3 py-1.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded text-sm text-white focus:outline-none focus:border-blue-500"
+          >
+            {namespaces.length === 0 && <option value="default">default</option>}
+            {namespaces.map((ns) => (
+              <option key={ns.name} value={ns.name}>
+                {ns.name} ({ns.status})
+              </option>
+            ))}
+          </select>
+
           <div className="flex gap-2">
             {(['pods', 'deployments', 'services'] as ResourceType[]).map((type) => (
               <button

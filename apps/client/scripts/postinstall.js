@@ -1,7 +1,10 @@
-// Postinstall script to ensure electron binaries are installed
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const electronPath = path.join(__dirname, '..', 'node_modules', 'electron');
 const distPath = path.join(electronPath, 'dist', process.platform === 'win32' ? 'electron.exe' : 'electron');
