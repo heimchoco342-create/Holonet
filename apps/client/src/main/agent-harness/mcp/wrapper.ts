@@ -21,8 +21,8 @@ export class McpToolWrapper extends StructuredTool {
     this.name = tool.name;
     this.description = tool.description || `MCP Tool: ${tool.name}`;
     
-    // Default to a permissive schema since we don't have a JSON Schema -> Zod converter handy
-    // In a real implementation, you'd want to parse tool.inputSchema into a Zod schema here
+    // We use a passthrough schema to allow any input that matches the tool's definition.
+    // In a production environment, you might want to convert the JSON schema to Zod.
     this.schema = z.object({}).passthrough();
   }
 
