@@ -1,5 +1,7 @@
 import { Workspace, Item, ItemType, Protocol, HttpMethod, Environment } from '@holonet/shared';
-import { randomUUID } from 'crypto';
+
+// Use global crypto for randomUUID (Node.js 19+ or Web Crypto)
+const uuid = () => crypto.randomUUID();
 
 export interface PostmanCollection {
   info: {
@@ -60,7 +62,7 @@ export class PostmanImporter {
 
     console.log(`PostmanImporter: Found collection "${collection.info.name}"`);
 
-    const workspaceId = randomUUID();
+    const workspaceId = uuid();
     const now = new Date();
 
     const workspace: Workspace = {
@@ -81,7 +83,7 @@ export class PostmanImporter {
       }
 
       const env: Environment = {
-        id: randomUUID(),
+        id: uuid(),
         workspaceId,
         name: 'Postman Variables',
         variables,
@@ -108,7 +110,7 @@ export class PostmanImporter {
     const now = new Date();
 
     postmanItems.forEach((pItem, index) => {
-      const id = randomUUID();
+      const id = uuid();
       const sortOrder = index;
 
       if (pItem.item) {
